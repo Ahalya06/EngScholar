@@ -228,5 +228,7 @@ def memes():
     return render_template('memes.html', comments=comments_list)
 
 if __name__ == "__main__":
+    # This block will only run when you execute python app.py locally.
+    # On Railway, the Procfile will use Gunicorn to start the app, and this block is ignored.
     port = int(os.environ.get("PORT", 5000))
     app.run(host="0.0.0.0", port=port, debug=True)
