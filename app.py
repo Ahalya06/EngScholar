@@ -1,3 +1,7 @@
+from app import app
+from flask import Flask
+
+app = Flask(__name__) 
 import os
 from flask import Flask, flash, redirect, render_template, request, url_for, jsonify
 from werkzeug.security import generate_password_hash, check_password_hash
