@@ -1,24 +1,77 @@
 from flask import Flask, render_template, request, redirect, url_for, session, flash, send_from_directory
 import os
+import time
+import requests
 from werkzeug.security import generate_password_hash, check_password_hash
+from werkzeug.utils import secure_filename
 from functools import wraps
 from flask_sqlalchemy import SQLAlchemy
 from datetime import datetime
 
 app = Flask(__name__)
-app.secret_key = "your_secret_key_change_this_in_production"
+app.secret_key = os.environ.get("SECRET_KEY", "your_secret_key_change_this_in_production")
 
-# Database Configuration
-basedir = os.path.abspath(os.path.dirname(__file__))
-app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///' + os.path.join(basedir, 'engscholar.db')
+# --- Database configuration -------------------------------------------------
+# On Vercel, the filesystem is read-only, so SQLite can't be written to.
+# If a Postgres connection string is present (set automatically when you
+# connect a Vercel Postgres / Neon store to the project), use that.
+# Otherwise fall back to a local SQLite file for local development.
+database_url = os.environ.get("DATABASE_URL") or os.environ.get("POSTGRES_URL")
+if database_url:
+    # SQLAlchemy 1.4+/2.x requires the "postgresql://" scheme; some
+    # providers still hand out "postgres://".
+    if database_url.startswith("postgres://"):
+        database_url = database_url.replace("postgres://", "postgresql://", 1)
+    app.config['SQLALCHEMY_DATABASE_URI'] = database_url
+else:
+    basedir = os.path.abspath(os.path.dirname(__file__))
+    app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///' + os.path.join(basedir, 'engscholar.db')
+
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 
 db = SQLAlchemy(app)
 
-# Directory to save uploaded notes
+# --- File storage configuration ---------------------------------------------
+# Same problem as the database: Vercel's filesystem is read-only, so uploaded
+# notes can't be saved to local disk in production. When a Vercel Blob store
+# is connected, BLOB_READ_WRITE_TOKEN is set automatically and we upload
+# there instead. Without it (e.g. running locally), we fall back to saving
+# on local disk exactly like before.
 UPLOAD_FOLDER = "static/uploads"
 os.makedirs(UPLOAD_FOLDER, exist_ok=True)
 app.config['UPLOAD_FOLDER'] = UPLOAD_FOLDER
+
+BLOB_READ_WRITE_TOKEN = os.environ.get("BLOB_READ_WRITE_TOKEN")
+BLOB_API_BASE = "https://blob.vercel-storage.com"
+
+
+def save_uploaded_note(file_storage, branch):
+    """Save an uploaded note. Returns (filename, url).
+
+    url is None when saved to local disk (dev fallback) — the app then
+    serves it via the /uploads/<branch>/<filename> route as before.
+    """
+    filename = secure_filename(file_storage.filename)
+
+    if BLOB_READ_WRITE_TOKEN:
+        pathname = f"notes/{branch}/{int(time.time())}-{filename}"
+        resp = requests.put(
+            f"{BLOB_API_BASE}/{pathname}",
+            data=file_storage.read(),
+            headers={
+                "Authorization": f"Bearer {BLOB_READ_WRITE_TOKEN}",
+                "x-api-version": "7",
+                "content-type": file_storage.content_type or "application/octet-stream",
+            },
+            timeout=30,
+        )
+        resp.raise_for_status()
+        return filename, resp.json()["url"]
+
+    branch_folder = os.path.join(app.config['UPLOAD_FOLDER'], branch)
+    os.makedirs(branch_folder, exist_ok=True)
+    file_storage.save(os.path.join(branch_folder, filename))
+    return filename, None
 
 # Database Models
 class User(db.Model):
@@ -34,6 +87,7 @@ class User(db.Model):
 class Note(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     filename = db.Column(db.String(200), nullable=False)
+    url = db.Column(db.String(500), nullable=True)  # Vercel Blob URL; None for local-disk fallback
     branch = db.Column(db.String(50), nullable=False)
     uploader_email = db.Column(db.String(120), nullable=False)
     uploaded_at = db.Column(db.DateTime, default=datetime.utcnow)
@@ -165,16 +219,16 @@ def notes():
             branch = request.form.get('branch')
             
             if file.filename != "" and branch:
-                # Create branch-specific folder
-                branch_folder = os.path.join(app.config['UPLOAD_FOLDER'], branch)
-                os.makedirs(branch_folder, exist_ok=True)
-                
-                # Save file
-                file.save(os.path.join(branch_folder, file.filename))
-                
+                try:
+                    filename, blob_url = save_uploaded_note(file, branch)
+                except Exception:
+                    flash('Note upload failed. Please try again.', 'error')
+                    return redirect(url_for('notes'))
+
                 # Save to database
                 new_note = Note(
-                    filename=file.filename,
+                    filename=filename,
+                    url=blob_url,
                     branch=branch,
                     uploader_email=session.get('user_email')
                 )
@@ -228,7 +282,5 @@ def memes():
     return render_template('memes.html', comments=comments_list)
 
 if __name__ == "__main__":
-    # This block will only run when you execute python app.py locally.
-    # On Railway, the Procfile will use Gunicorn to start the app, and this block is ignored.
     port = int(os.environ.get("PORT", 5000))
     app.run(host="0.0.0.0", port=port, debug=True)

@@ -18,7 +18,7 @@
                     {% for note in notes %}
                         <li class="file-item">
                             <span class="file-name">{{ note.filename }}</span>
-                            <a href="{{ url_for('uploaded_file', branch=note.branch, filename=note.filename) }}" class="btn" target="_blank">Download</a>
+                            <a href="{{ note.url or url_for('uploaded_file', branch=note.branch, filename=note.filename) }}" class="btn" target="_blank">Download</a>
                         </li>
                     {% endfor %}
                 </ul>
