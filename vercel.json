@@ -11,8 +11,5 @@
       "src": "/(.*)",
       "dest": "app.py"
     }
-  ],
-  "env": {
-    "SECRET_KEY": "your-secret-key-here-change-this-in-production"
-  }
+  ]
 }

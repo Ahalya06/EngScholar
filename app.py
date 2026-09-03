@@ -1,30 +1,75 @@
+import os
 from flask import Flask, flash, redirect, render_template, request, url_for, jsonify
 from werkzeug.security import generate_password_hash, check_password_hash
-from config import engine, SessionLocal, Base, redis_client, User
-from sqlalchemy import text
-import os
+from sqlalchemy import create_engine, Column, Integer, String, DateTime, text
+from sqlalchemy.orm import sessionmaker, declarative_base
+from datetime import datetime
+import redis
 
+# ========== CREATE FLASK APP ==========
+# THIS MUST BE AT THE TOP LEVEL - Vercel looks for this
 app = Flask(__name__)
-app.secret_key = os.environ.get('SECRET_KEY', 'dev-key-please-change-in-production')
+app.secret_key = os.environ.get('SECRET_KEY', 'dev-key-change-in-production')
 
-# ========== Initialize Database ==========
-def init_db():
-    """Create all database tables"""
-    try:
-        Base.metadata.create_all(bind=engine)
-        print("✅ Database tables created/verified")
-        return True
-    except Exception as e:
-        print(f"⚠️ Database initialization error: {e}")
-        return False
+# ========== DATABASE SETUP ==========
+DATABASE_URL = os.environ.get('POSTGRES_URL')
 
-# Run initialization on first request
-@app.before_request
-def before_request():
-    if not hasattr(app, 'db_initialized'):
-        app.db_initialized = init_db()
+if not DATABASE_URL:
+    # Fallback for local development
+    DATABASE_URL = 'sqlite:///engscholar.db'
+    print("⚠️ Using SQLite (local development)")
+else:
+    # Fix for Vercel Postgres
+    if DATABASE_URL.startswith('postgres://'):
+        DATABASE_URL = DATABASE_URL.replace('postgres://', 'postgresql://', 1)
+    print("✅ Using PostgreSQL")
 
-# ========== Registration Route ==========
+# Create database engine
+engine = create_engine(
+    DATABASE_URL,
+    pool_size=5,
+    max_overflow=10,
+    pool_pre_ping=True,
+    pool_recycle=3600
+)
+
+SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
+Base = declarative_base()
+
+# ========== USER MODEL ==========
+class User(Base):
+    __tablename__ = 'users'
+    
+    id = Column(Integer, primary_key=True, index=True)
+    name = Column(String(100), nullable=False)
+    email = Column(String(100), unique=True, index=True, nullable=False)
+    password_hash = Column(String(200), nullable=False)
+    created_at = Column(DateTime, default=datetime.utcnow)
+
+# ========== REDIS SETUP ==========
+redis_client = None
+try:
+    REDIS_URL = os.environ.get('REDIS_URL') or os.environ.get('KV_REST_API_URL')
+    if REDIS_URL:
+        redis_client = redis.from_url(REDIS_URL, decode_responses=True)
+        redis_client.ping()
+        print("✅ Redis connected")
+except Exception as e:
+    print(f"⚠️ Redis not available: {e}")
+
+# ========== CREATE TABLES ==========
+try:
+    Base.metadata.create_all(bind=engine)
+    print("✅ Database tables created/verified")
+except Exception as e:
+    print(f"⚠️ Database init error: {e}")
+
+# ========== ROUTES ==========
+
+@app.route('/')
+def home():
+    return render_template('landing.html')
+
 @app.route('/register', methods=['GET', 'POST'])
 def register():
     if request.method == 'POST':
@@ -68,7 +113,7 @@ def register():
             db.commit()
             db.refresh(new_user)
             
-            # Cache user in Redis if available
+            # Cache in Redis if available
             if redis_client:
                 try:
                     redis_client.setex(f"user:{email}", 3600, str(new_user.id))
@@ -81,7 +126,7 @@ def register():
         except Exception as e:
             if db:
                 db.rollback()
-            print(f"❌ Registration error: {str(e)}")
+            print(f"❌ Registration error: {e}")
             flash('Registration failed. Please try again.', 'danger')
             return render_template('register.html')
         finally:
@@ -94,109 +139,82 @@ def register():
 def login():
     return render_template('login.html')
 
-# ========== Health Check Endpoints ==========
+@app.route('/dashboard')
+def dashboard():
+    return render_template('dashboard.html')
+
+@app.route('/scholarships')
+def scholarships():
+    return render_template('scholarships.html')
+
+@app.route('/internships')
+def internships():
+    return render_template('internships.html')
+
+@app.route('/notes')
+def notes():
+    return render_template('notes.html')
+
+@app.route('/projects')
+def projects():
+    return render_template('projects.html')
+
+@app.route('/courses')
+def courses():
+    return render_template('courses.html')
+
+@app.route('/memes')
+def memes():
+    return render_template('memes.html')
+
+@app.route('/view_notes')
+def view_notes():
+    return render_template('view_notes.html')
+
+# ========== HEALTH CHECKS ==========
+
 @app.route('/health')
 def health():
-    """Basic health check"""
+    """Health check for Vercel"""
     status = {
+        "status": "ok",
         "database": "❌",
-        "redis": "❌",
-        "postgres": "❌"
+        "redis": "❌"
     }
     
-    # Check PostgreSQL
+    # Check database
     try:
         db = SessionLocal()
         db.execute(text("SELECT 1"))
         db.close()
         status["database"] = "✅"
-        status["postgres"] = "✅"
-        print("✅ PostgreSQL health check passed")
     except Exception as e:
-        print(f"❌ PostgreSQL health check failed: {e}")
+        print(f"Database health check failed: {e}")
     
     # Check Redis
     try:
         if redis_client and redis_client.ping():
             status["redis"] = "✅"
-            print("✅ Redis health check passed")
-    except Exception as e:
-        print(f"❌ Redis health check failed: {e}")
+    except:
+        pass
     
     return jsonify(status)
 
 @app.route('/test-db')
 def test_db():
-    """Test database connection with detailed info"""
+    """Test database connection"""
     try:
         db = SessionLocal()
-        
-        # Get PostgreSQL version
-        version = db.execute(text("SELECT version()")).scalar()
-        
-        # Check if users table exists
-        tables = db.execute(text("""
-            SELECT table_name 
-            FROM information_schema.tables 
-            WHERE table_schema = 'public'
-        """)).fetchall()
-        
+        result = db.execute(text("SELECT 1")).scalar()
         db.close()
-        
         return jsonify({
             "status": "success",
-            "database": "PostgreSQL",
-            "version": version[:50] + "..." if len(version) > 50 else version,
-            "tables": [t[0] for t in tables],
-            "users_table_exists": "users" in [t[0] for t in tables]
+            "database": "Connected",
+            "test": result
         })
     except Exception as e:
-        return jsonify({
-            "status": "error",
-            "message": str(e)
-        }), 500
+        return jsonify({"status": "error", "message": str(e)}), 500
 
-@app.route('/init-db')
-def init_db_route():
-    """Initialize database tables"""
-    try:
-        Base.metadata.create_all(bind=engine)
-        return jsonify({
-            "status": "success",
-            "message": "Database tables created successfully!"
-        })
-    except Exception as e:
-        return jsonify({
-            "status": "error",
-            "message": str(e)
-        }), 500
-    @app.route('/db-info')
-def db_info():
-    """Get database information"""
-    try:
-        db = SessionLocal()
-        
-        # Get database info
-        info = db.execute(text("""
-            SELECT 
-                current_database() as database_name,
-                current_user as user,
-                version() as version
-        """)).first()
-        
-        db.close()
-        
-        return jsonify({
-            "database": info[0],
-            "user": info[1],
-            "version": info[2][:100],
-            "type": "PostgreSQL"
-        })
-    except Exception as e:
-        return jsonify({"error": str(e)}), 500
-
-# ========== Run Application ==========
+# ========== LOCAL DEVELOPMENT ==========
 if __name__ == '__main__':
-    # Initialize database before running
-    init_db()
     app.run(debug=True)
