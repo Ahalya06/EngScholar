@@ -1,6 +1,7 @@
-Flask==3.0.0
-Werkzeug==3.0.1
-gunicorn==21.2.0
+Flask==2.3.3
 Flask-SQLAlchemy==3.1.1
-psycopg2-binary==2.9.9
-requests==2.31.0
+psycopg2-binary==2.9.9  # PostgreSQL driver
+redis==4.6.0
+Werkzeug==2.3.7
+python-dotenv==1.0.0
+Flask-Migrate==4.0.5  # For database migrations
