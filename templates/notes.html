@@ -1,0 +1,53 @@
+{% extends "base.html" %}
+{% block title %}Notes — EngScholar{% endblock %}
+{% block content %}
+<div class="page-header">
+    <div class="eyebrow-line"></div>
+    <h1>Notes portal</h1>
+    <p>Share and access study materials with your peers, organized by branch.</p>
+</div>
+
+<div class="page-shell">
+    <div class="two-col">
+        <div class="card">
+            <h3>Upload notes</h3>
+            <form action="/notes" method="POST" enctype="multipart/form-data">
+                <div class="field">
+                    <label for="branch">Select branch</label>
+                    <select id="branch" name="branch" required>
+                        <option value="">-- Choose your branch --</option>
+                        <option value="CSE">Computer Science Engineering (CSE)</option>
+                        <option value="ECE">Electronics & Communication (ECE)</option>
+                        <option value="ME">Mechanical Engineering (ME)</option>
+                        <option value="CE">Civil Engineering (CE)</option>
+                        <option value="EEE">Electrical & Electronics (EEE)</option>
+                        <option value="IT">Information Technology (IT)</option>
+                    </select>
+                </div>
+                <div class="field">
+                    <label for="note_file">Upload file (PDF, DOC, PPT)</label>
+                    <input type="file" id="note_file" name="note_file" accept=".pdf,.doc,.docx,.ppt,.pptx" required>
+                    <small>Supported formats: PDF, DOC, DOCX, PPT, PPTX</small>
+                </div>
+                <button type="submit" class="btn btn-block">Upload note</button>
+            </form>
+        </div>
+
+        <div>
+            <div class="card">
+                <h3>Access notes</h3>
+                <p>Browse and download notes uploaded by fellow students, organized by branch.</p>
+                <a href="/view-notes" class="btn btn-outline btn-block" style="margin-top:8px;">View all notes</a>
+            </div>
+            <div class="card">
+                <h3>Guidelines</h3>
+                <p style="margin-bottom:4px;">Upload only educational content</p>
+                <p style="margin-bottom:4px;">Ensure files are properly named</p>
+                <p style="margin-bottom:4px;">Select the correct branch</p>
+                <p style="margin-bottom:4px;">File size limit: 10MB</p>
+                <p>Share quality notes to help others</p>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

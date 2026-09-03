@@ -1,0 +1,232 @@
+from flask import Flask, render_template, request, redirect, url_for, session, flash, send_from_directory
+import os
+from werkzeug.security import generate_password_hash, check_password_hash
+from functools import wraps
+from flask_sqlalchemy import SQLAlchemy
+from datetime import datetime
+
+app = Flask(__name__)
+app.secret_key = "your_secret_key_change_this_in_production"
+
+# Database Configuration
+basedir = os.path.abspath(os.path.dirname(__file__))
+app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///' + os.path.join(basedir, 'engscholar.db')
+app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
+
+db = SQLAlchemy(app)
+
+# Directory to save uploaded notes
+UPLOAD_FOLDER = "static/uploads"
+os.makedirs(UPLOAD_FOLDER, exist_ok=True)
+app.config['UPLOAD_FOLDER'] = UPLOAD_FOLDER
+
+# Database Models
+class User(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    name = db.Column(db.String(100), nullable=False)
+    email = db.Column(db.String(120), unique=True, nullable=False)
+    password = db.Column(db.String(200), nullable=False)
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    
+    def __repr__(self):
+        return f'<User {self.email}>'
+
+class Note(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    filename = db.Column(db.String(200), nullable=False)
+    branch = db.Column(db.String(50), nullable=False)
+    uploader_email = db.Column(db.String(120), nullable=False)
+    uploaded_at = db.Column(db.DateTime, default=datetime.utcnow)
+    
+    def __repr__(self):
+        return f'<Note {self.filename}>'
+
+class MemeComment(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    user_name = db.Column(db.String(100), nullable=False)
+    comment = db.Column(db.Text, nullable=False)
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    
+    def __repr__(self):
+        return f'<Comment by {self.user_name}>'
+
+# Create database tables
+with app.app_context():
+    db.create_all()
+
+# Login required decorator
+def login_required(f):
+    @wraps(f)
+    def decorated_function(*args, **kwargs):
+        if 'user_email' not in session:
+            flash('Please login to access this page.', 'warning')
+            return redirect(url_for('login'))
+        return f(*args, **kwargs)
+    return decorated_function
+
+@app.route('/')
+def landing():
+    return render_template('landing.html')
+
+@app.route('/register', methods=['GET', 'POST'])
+def register():
+    if request.method == 'POST':
+        name = request.form.get('name')
+        email = request.form.get('email')
+        password = request.form.get('password')
+        confirm_password = request.form.get('confirm_password')
+        
+        # Validation
+        if not name or not email or not password:
+            flash('All fields are required!', 'error')
+            return redirect(url_for('register'))
+        
+        if password != confirm_password:
+            flash('Passwords do not match!', 'error')
+            return redirect(url_for('register'))
+        
+        # Check if user exists
+        existing_user = User.query.filter_by(email=email).first()
+        if existing_user:
+            flash('Email already registered!', 'error')
+            return redirect(url_for('register'))
+        
+        # Create new user
+        hashed_password = generate_password_hash(password)
+        new_user = User(name=name, email=email, password=hashed_password)
+        
+        try:
+            db.session.add(new_user)
+            db.session.commit()
+            flash('Registration successful! Please login.', 'success')
+            return redirect(url_for('login'))
+        except Exception as e:
+            db.session.rollback()
+            flash('Registration failed. Please try again.', 'error')
+            return redirect(url_for('register'))
+    
+    return render_template('register.html')
+
+@app.route('/login', methods=['GET', 'POST'])
+def login():
+    if request.method == 'POST':
+        email = request.form.get('email')
+        password = request.form.get('password')
+        
+        user = User.query.filter_by(email=email).first()
+        
+        if user and check_password_hash(user.password, password):
+            session['user_email'] = user.email
+            session['user_name'] = user.name
+            flash(f'Welcome back, {user.name}!', 'success')
+            return redirect(url_for('dashboard'))
+        else:
+            flash('Invalid email or password!', 'error')
+    
+    return render_template('login.html')
+
+@app.route('/logout')
+def logout():
+    session.clear()
+    flash('You have been logged out successfully.', 'success')
+    return redirect(url_for('landing'))
+
+@app.route('/dashboard')
+@login_required
+def dashboard():
+    return render_template('dashboard.html', user_name=session.get('user_name'))
+
+@app.route('/scholarships')
+@login_required
+def scholarships():
+    return render_template('scholarships.html')
+
+@app.route('/internships')
+@login_required
+def internships():
+    return render_template('internships.html')
+
+@app.route('/Courses')
+@login_required
+def courses():
+    return render_template('Courses.html')
+
+@app.route('/projects')
+@login_required
+def projects():
+    return render_template('projects.html')
+
+@app.route('/notes', methods=['GET', 'POST'])
+@login_required
+def notes():
+    if request.method == 'POST':
+        if 'note_file' in request.files:
+            file = request.files['note_file']
+            branch = request.form.get('branch')
+            
+            if file.filename != "" and branch:
+                # Create branch-specific folder
+                branch_folder = os.path.join(app.config['UPLOAD_FOLDER'], branch)
+                os.makedirs(branch_folder, exist_ok=True)
+                
+                # Save file
+                file.save(os.path.join(branch_folder, file.filename))
+                
+                # Save to database
+                new_note = Note(
+                    filename=file.filename,
+                    branch=branch,
+                    uploader_email=session.get('user_email')
+                )
+                db.session.add(new_note)
+                db.session.commit()
+                
+                flash('Note uploaded successfully!', 'success')
+                return redirect(url_for('notes'))
+    
+    return render_template('notes.html')
+
+@app.route("/view-notes")
+@login_required
+def view_notes():
+    # Get all notes from database
+    notes = Note.query.order_by(Note.uploaded_at.desc()).all()
+    
+    # Organize by branch
+    notes_by_branch = {}
+    for note in notes:
+        if note.branch not in notes_by_branch:
+            notes_by_branch[note.branch] = []
+        notes_by_branch[note.branch].append(note)
+    
+    return render_template("view_notes.html", notes_by_branch=notes_by_branch)
+
+@app.route('/uploads/<branch>/<filename>')
+@login_required
+def uploaded_file(branch, filename):
+    return send_from_directory(os.path.join(app.config['UPLOAD_FOLDER'], branch), filename)
+
+@app.route('/memes', methods=['GET', 'POST'])
+@login_required
+def memes():
+    if request.method == 'POST':
+        comment = request.form.get('comment')
+        if comment:
+            new_comment = MemeComment(
+                user_name=session.get('user_name'),
+                comment=comment
+            )
+            db.session.add(new_comment)
+            db.session.commit()
+            flash('Comment added!', 'success')
+        return redirect(url_for('memes'))
+    
+    # Get all comments
+    comments = MemeComment.query.order_by(MemeComment.created_at.desc()).all()
+    comments_list = [{'user': c.user_name, 'comment': c.comment} for c in comments]
+    
+    return render_template('memes.html', comments=comments_list)
+
+if __name__ == "__main__":
+    port = int(os.environ.get("PORT", 5000))
+    app.run(host="0.0.0.0", port=port, debug=True)

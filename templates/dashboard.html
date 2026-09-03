@@ -1,0 +1,44 @@
+{% extends "base.html" %}
+{% block title %}Dashboard — EngScholar{% endblock %}
+{% block content %}
+<div class="page-header">
+    <div class="eyebrow-line"></div>
+    <h1>Welcome, {{ user_name }}</h1>
+    <p>Your engineering journey starts here. Explore opportunities, share knowledge, and grow together.</p>
+</div>
+
+<div class="page-shell">
+    <div class="dash-grid">
+        <a href="/scholarships" class="card">
+            <div class="card-index">Funding</div>
+            <h3>Scholarships</h3>
+            <p>Latest scholarship opportunities to fund your education</p>
+        </a>
+        <a href="/internships" class="card">
+            <div class="card-index">Experience</div>
+            <h3>Internships</h3>
+            <p>Internships at top companies with real-world exposure</p>
+        </a>
+        <a href="/Courses" class="card">
+            <div class="card-index">Skills</div>
+            <h3>Free Courses</h3>
+            <p>Free and paid courses and certifications by branch</p>
+        </a>
+        <a href="/projects" class="card">
+            <div class="card-index">Build</div>
+            <h3>Project Ideas</h3>
+            <p>Creative project ideas to strengthen your portfolio</p>
+        </a>
+        <a href="/notes" class="card">
+            <div class="card-index">Share</div>
+            <h3>Notes Sharing</h3>
+            <p>Upload and download study materials by branch</p>
+        </a>
+        <a href="/memes" class="card">
+            <div class="card-index">Unwind</div>
+            <h3>Fun Zone</h3>
+            <p>Engineering memes and humor for a quick break</p>
+        </a>
+    </div>
+</div>
+{% endblock %}

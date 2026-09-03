@@ -1,0 +1,72 @@
+{% extends "base.html" %}
+{% block title %}Fun Zone — EngScholar{% endblock %}
+{% block content %}
+<div class="page-header">
+    <div class="eyebrow-line"></div>
+    <h1>Engineering fun zone</h1>
+    <p>Take a break and enjoy some engineering humor.</p>
+</div>
+
+<div class="page-shell">
+    <a href="/dashboard" class="back-link">&larr; Back to dashboard</a>
+
+    <div class="meme-grid">
+        <div class="card">
+            <img src="https://i.imgflip.com/30zz5g.jpg" alt="Exam Meme">
+            <p>When exams are tomorrow and you open the book for the first time.</p>
+        </div>
+        <div class="card">
+            <img src="https://i.imgflip.com/4/4t0m5.jpg" alt="Project Meme">
+            <p>"This project will only take 2 days" — takes the whole semester.</p>
+        </div>
+        <div class="card">
+            <img src="https://i.imgflip.com/1otk96.jpg" alt="Coding Meme">
+            <p>Coding at 2 AM: why is this semicolon ruining my life?</p>
+        </div>
+        <div class="card">
+            <img src="https://i.imgflip.com/26am.jpg" alt="Teacher Meme">
+            <p>When the teacher says: "It's very easy, you'll understand later."</p>
+        </div>
+        <div class="card">
+            <img src="https://i.imgflip.com/5y0w.jpg" alt="Group Project Meme">
+            <p>Group projects: one person works, three people "supervise."</p>
+        </div>
+        <div class="card">
+            <img src="https://i.imgflip.com/1bij.jpg" alt="WiFi Meme">
+            <p>Wi-Fi in class: not working. Wi-Fi in canteen: full speed.</p>
+        </div>
+        <div class="card">
+            <img src="https://i.imgflip.com/1ur9b0.jpg" alt="Easy Exam Meme">
+            <p>When the professor says "the exam will be easy" and it looks like a NASA test paper.</p>
+        </div>
+        <div class="card">
+            <img src="https://i.imgflip.com/4/2wifvo.jpg" alt="Assignment Deadline Meme">
+            <p>Submitting assignments at 11:59 PM.</p>
+        </div>
+    </div>
+
+    <div class="card">
+        <h3>Share your thoughts</h3>
+        <form method="POST" action="/memes">
+            <div class="field">
+                <textarea name="comment" rows="3" placeholder="Share your funny engineering story or comment..." required></textarea>
+            </div>
+            <button type="submit" class="btn">Post comment</button>
+        </form>
+
+        <div style="margin-top: 24px;">
+            <h4 style="font-size: 1rem; margin-bottom: 12px;">Recent comments</h4>
+            {% if comments %}
+                {% for comment in comments %}
+                    <div class="comment-item">
+                        <div class="comment-user">{{ comment.user }}</div>
+                        <p style="margin:0;">{{ comment.comment }}</p>
+                    </div>
+                {% endfor %}
+            {% else %}
+                <p class="text-muted">No comments yet. Be the first to share your thoughts.</p>
+            {% endif %}
+        </div>
+    </div>
+</div>
+{% endblock %}

@@ -1,0 +1,69 @@
+{% extends "base.html" %}
+{% block title %}Internships — EngScholar{% endblock %}
+{% block content %}
+<div class="page-header">
+    <div class="eyebrow-line"></div>
+    <h1>Internship opportunities</h1>
+    <p>Gain real-world experience at these companies and programs.</p>
+</div>
+
+<div class="page-shell">
+    <a href="/dashboard" class="back-link">&larr; Back to dashboard</a>
+
+    <div class="search-box">
+        <input type="text" id="searchBar" placeholder="Search internships by company name...">
+    </div>
+
+    <div id="internshipList" class="card-grid">
+        <div class="card">
+            <h3><a href="https://internshala.com" target="_blank">Internshala</a></h3>
+            <p><b>Duration:</b> Varies (1–6 months)</p>
+            <p><b>Benefits:</b> Wide range of companies, easy apply for students</p>
+        </div>
+        <div class="card">
+            <h3><a href="https://careers.tcs.com" target="_blank">TCS Internship</a></h3>
+            <p><b>Duration:</b> 8–12 weeks</p>
+            <p><b>Benefits:</b> Industry exposure, certificate from TCS</p>
+        </div>
+        <div class="card">
+            <h3><a href="https://www.microsoft.com/en-in/careers" target="_blank">Microsoft Internship</a></h3>
+            <p><b>Duration:</b> 12 weeks</p>
+            <p><b>Benefits:</b> Hands-on projects, chance for full-time job</p>
+        </div>
+        <div class="card">
+            <h3><a href="https://careers.google.com/students/" target="_blank">Google Internship</a></h3>
+            <p><b>Duration:</b> 10–12 weeks</p>
+            <p><b>Benefits:</b> Work on real products, stipend, mentorship</p>
+        </div>
+        <div class="card">
+            <h3><a href="https://www.ibm.com/employment/internships/" target="_blank">IBM Internship</a></h3>
+            <p><b>Duration:</b> 2–6 months</p>
+            <p><b>Benefits:</b> Research & development, exposure to AI & cloud</p>
+        </div>
+        <div class="card">
+            <h3><a href="https://careers.infosys.com/" target="_blank">Infosys InStep</a></h3>
+            <p><b>Duration:</b> 8 weeks</p>
+            <p><b>Benefits:</b> Live projects, global exposure, certificate</p>
+        </div>
+        <div class="card">
+            <h3><a href="https://www.nasa.gov/careers/" target="_blank">NASA Internship</a></h3>
+            <p><b>Duration:</b> 10 weeks</p>
+            <p><b>Benefits:</b> Research experience, global recognition</p>
+        </div>
+    </div>
+</div>
+{% endblock %}
+{% block extra_scripts %}
+<script>
+    var searchBar = document.getElementById("searchBar");
+    var list = document.getElementById("internshipList");
+    var items = list.getElementsByClassName("card");
+    searchBar.addEventListener("keyup", function () {
+        var filter = searchBar.value.toLowerCase();
+        for (var i = 0; i < items.length; i++) {
+            var text = items[i].innerText.toLowerCase();
+            items[i].style.display = text.includes(filter) ? "" : "none";
+        }
+    });
+</script>
+{% endblock %}

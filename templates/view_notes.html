@@ -1,0 +1,35 @@
+{% extends "base.html" %}
+{% block title %}Browse Notes — EngScholar{% endblock %}
+{% block content %}
+<div class="page-header">
+    <div class="eyebrow-line"></div>
+    <h1>Browse notes</h1>
+    <p>Study materials shared by your peers, organized by branch.</p>
+</div>
+
+<div class="page-shell">
+    <a href="/notes" class="back-link">&larr; Back to notes portal</a>
+
+    {% if notes_by_branch %}
+        {% for branch, notes in notes_by_branch.items() %}
+            <div class="card" style="margin-bottom: 28px;">
+                <h3>{{ branch }} <span class="tag tag-branch" style="margin-left:8px;">{{ notes|length }} file{{ 's' if notes|length != 1 }}</span></h3>
+                <ul class="file-list">
+                    {% for note in notes %}
+                        <li class="file-item">
+                            <span class="file-name">{{ note.filename }}</span>
+                            <a href="{{ url_for('uploaded_file', branch=note.branch, filename=note.filename) }}" class="btn" target="_blank">Download</a>
+                        </li>
+                    {% endfor %}
+                </ul>
+            </div>
+        {% endfor %}
+    {% else %}
+        <div class="empty-state">
+            <h3>No notes available yet</h3>
+            <p>Be the first to upload notes and help your peers.</p>
+            <a href="/notes" class="btn" style="margin-top:12px;">Upload your first note</a>
+        </div>
+    {% endif %}
+</div>
+{% endblock %}

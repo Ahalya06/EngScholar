@@ -1,0 +1,72 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% block title %}EngScholar{% endblock %}</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;700&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link href="{{ url_for('static', filename='css/main.css') }}" rel="stylesheet">
+    {% block extra_head %}{% endblock %}
+</head>
+<body>
+    <a href="#main" class="skip-link">Skip to content</a>
+
+    {% block nav %}
+    <header class="top-bar">
+        <div class="top-bar-inner">
+            <a class="brand" href="{{ '/dashboard' if session.get('user_email') else '/' }}">
+                <span class="brand-mark"></span> EngScholar
+            </a>
+            <button class="nav-toggle" id="navToggle" aria-expanded="false" aria-controls="navLinks">Menu</button>
+            <ul class="nav-links" id="navLinks">
+                {% if session.get('user_email') %}
+                    <li><a href="/dashboard" class="{{ 'active' if request.path == '/dashboard' }}">Dashboard</a></li>
+                    <li><a href="/scholarships" class="{{ 'active' if request.path == '/scholarships' }}">Scholarships</a></li>
+                    <li><a href="/internships" class="{{ 'active' if request.path == '/internships' }}">Internships</a></li>
+                    <li><a href="/Courses" class="{{ 'active' if request.path == '/Courses' }}">Courses</a></li>
+                    <li><a href="/projects" class="{{ 'active' if request.path == '/projects' }}">Projects</a></li>
+                    <li><a href="/notes" class="{{ 'active' if request.path in ['/notes', '/view-notes'] }}">Notes</a></li>
+                    <li><a href="/memes" class="{{ 'active' if request.path == '/memes' }}">Fun Zone</a></li>
+                    <li><a href="/logout" class="btn-logout-link">Logout</a></li>
+                {% else %}
+                    <li><a href="/login">Login</a></li>
+                    <li><a href="/register">Register</a></li>
+                {% endif %}
+            </ul>
+        </div>
+    </header>
+    {% endblock %}
+
+    <main id="main">
+        {% block flash %}
+        {% with messages = get_flashed_messages(with_categories=true) %}
+            {% if messages %}
+                <div class="page-shell" style="padding-top: 24px; padding-bottom: 0;">
+                {% for category, message in messages %}
+                    <div class="alert alert-{{ category }}" role="alert">
+                        <span>{{ message }}</span>
+                        <button type="button" onclick="this.parentElement.remove()" aria-label="Dismiss">&times;</button>
+                    </div>
+                {% endfor %}
+                </div>
+            {% endif %}
+        {% endwith %}
+        {% endblock %}
+
+        {% block content %}{% endblock %}
+    </main>
+
+    <script>
+        var navToggle = document.getElementById('navToggle');
+        var navLinks = document.getElementById('navLinks');
+        if (navToggle) {
+            navToggle.addEventListener('click', function () {
+                var isOpen = navLinks.classList.toggle('open');
+                navToggle.setAttribute('aria-expanded', isOpen);
+            });
+        }
+    </script>
+    {% block extra_scripts %}{% endblock %}
+</body>
+</html>
