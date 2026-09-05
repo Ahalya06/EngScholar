@@ -24,7 +24,12 @@
                     <li><a href="/dashboard" class="{{ 'active' if request.path == '/dashboard' }}">Dashboard</a></li>
                     <li><a href="/scholarships" class="{{ 'active' if request.path == '/scholarships' }}">Scholarships</a></li>
                     <li><a href="/internships" class="{{ 'active' if request.path == '/internships' }}">Internships</a></li>
-                   <li><a href="{{ url_for('courses') }}" class="{{ 'active' if request.path == '/courses' }}">Courses</a></li>
+                   <li>
+    <a href="{{ url_for('courses') }}"
+       class="{{ 'active' if request.path == '/courses' }}">
+        Courses
+    </a>
+</li>
                     <li><a href="/projects" class="{{ 'active' if request.path == '/projects' }}">Projects</a></li>
                     <li><a href="/notes" class="{{ 'active' if request.path in ['/notes', '/view-notes'] }}">Notes</a></li>
                     <li><a href="/memes" class="{{ 'active' if request.path == '/memes' }}">Fun Zone</a></li>
