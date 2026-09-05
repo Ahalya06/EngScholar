@@ -665,6 +665,12 @@ def courses():
     )
 
 
+
+@app.route("/Courses")
+def courses_old():
+    return redirect(url_for("courses"))
+
+
 # =========================================================
 # MEMES
 # =========================================================
