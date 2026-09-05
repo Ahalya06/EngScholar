@@ -661,7 +661,7 @@ def projects():
 def courses():
 
     return render_template(
-        "Courses.html"
+        "courses.html"
     )
 
 
